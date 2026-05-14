@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CertIntel — Certificate Intelligence Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d0f18;
+      --surface: #161926;
+      --surface2: #1e2235;
+      --surface3: #252a3d;
+      --border: #2a2f45;
+      --border2: #353c58;
+      --accent: #5b8df8;
+      --accent2: #8b72fa;
+      --green: #34d399;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --purple: #a78bfa;
+      --teal: #2dd4bf;
+      --text: #e2e8f0;
+      --text2: #b0bbd0;
+      --muted: #6b7898;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      background: rgba(22, 25, 38, 0.95);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+    .dot.error { background: var(--red); }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      height: calc(100vh - 58px);
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 210px;
+      min-width: 210px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 0;
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 16px 6px;
+      margin-top: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--text2);
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: all .15s;
+      user-select: none;
+    }
+
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(91,141,248,.1); color: var(--accent); border-left-color: var(--accent); }
+    .nav-icon { font-size: 14px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    .sidebar-divider { height: 1px; background: var(--border); margin: 10px 0; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 28px 36px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(91,141,248,.05) 0%, rgba(139,114,250,.03) 100%);
+    }
+
+    .hero-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .hero h2 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    .hero-btns { display: flex; gap: 8px; align-items: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    /* ── SEARCH STATUS BAR ── */
+    #search-status {
+      margin-top: 14px;
+      padding: 9px 14px;
+      background: rgba(91,141,248,.08);
+      border: 1px solid rgba(91,141,248,.2);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--accent);
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #search-status.visible { display: flex; }
+
+    .search-spinner {
+      width: 12px; height: 12px;
+      border: 2px solid rgba(91,141,248,.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ── TABS ── */
+    .tabs-bar {
+      display: flex;
+      padding: 0 36px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .tab {
+      padding: 11px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all .15s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── CONTENT ── */
+    .content-area {
+      flex: 1;
+      padding: 24px 36px;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 72px 20px;
+      color: var(--muted);
+      animation: fadeIn .4s ease;
+    }
+
+    .empty-icon { font-size: 52px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 13px; max-width: 360px; margin: 0 auto; }
+
+    /* ── SECTION CARD ── */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      animation: fadeIn .3s ease;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s;
+    }
+    .section-header:hover { background: var(--surface2); }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-icon { font-size: 16px; }
+
+    .chevron {
+      font-size: 11px;
+      color: var(--muted);
+      transition: transform .2s;
+    }
+    .section-card.collapsed .chevron { transform: rotate(-90deg); }
+    .section-card.collapsed .section-body { display: none; }
+
+    .section-body {
+      padding: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── ALERT CARD ── */
+    .alert-block {
+      background: rgba(248,113,113,.06);
+      border: 1px solid rgba(248,113,113,.2);
+      border-left: 3px solid var(--red);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .alert-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--red);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .alert-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 13px;
+      align-items: flex-start;
+    }
+
+    .alert-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      padding: 2px 7px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .alert-value { color: var(--text2); line-height: 1.5; }
+    .alert-action { color: var(--text); font-weight: 500; }
+
+    /* ── DEADLINE TABLE ── */
+    .deadline-table { width: 100%; border-collapse: collapse; }
+    .deadline-table th {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      color: var(--muted);
+      padding: 8px 12px;
+      text-align: left;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+    .deadline-table td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+    .deadline-table tr:last-child td { border-bottom: none; }
+    .deadline-table tr:hover td { background: rgba(255,255,255,.02); }
+
+    .urgency-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .urgency-high { background: rgba(248,113,113,.15); color: var(--red); }
+    .urgency-medium { background: rgba(251,191,36,.12); color: var(--yellow); }
+    .urgency-low { background: rgba(52,211,153,.1); color: var(--green); }
+
+    /* ── PLAYER GRID ── */
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .player-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .player-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .player-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .player-field {
+      margin-bottom: 10px;
+    }
+
+    .player-field-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .player-field-value {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    /* ── TREND CARDS ── */
+    .trend-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+
+    .trend-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .trend-name { font-size: 14px; font-weight: 700; color: var(--text); }
+
+    .trend-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .trend-early { background: rgba(52,211,153,.1); color: var(--green); }
+    .trend-accelerating { background: rgba(251,191,36,.12); color: var(--yellow); }
+    .trend-mature { background: rgba(91,141,248,.12); color: var(--accent); }
+
+    .trend-field { margin-bottom: 7px; font-size: 13px; }
+    .trend-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 2px; }
+    .trend-field-value { color: var(--text2); line-height: 1.5; }
+
+    /* ── ACTION BLOCKS ── */
+    .action-group { margin-bottom: 18px; }
+
+    .action-group-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 10px;
+    }
+
+    .action-timeline-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .badge-immediate { background: rgba(248,113,113,.15); color: var(--red); }
+    .badge-nearterm { background: rgba(251,191,36,.12); color: var(--yellow); }
+    .badge-strategic { background: rgba(91,141,248,.12); color: var(--accent); }
+
+    .action-item {
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 7px;
+      font-size: 13px;
+      color: var(--text2);
+      align-items: flex-start;
+    }
+
+    .action-bullet { font-size: 16px; flex-shrink: 0; margin-top: -1px; }
+
+    /* ── NEWS ITEMS ── */
+    .news-group { margin-bottom: 20px; }
+    .news-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .news-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .news-item:last-child { border-bottom: none; }
+
+    .news-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0; margin-top: 6px; }
+
+    .news-body { flex: 1; }
+    .news-title { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .news-summary { color: var(--text2); font-size: 12px; line-height: 1.5; }
+
+    /* ── LINK CHIP ── */
+    .link-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(91,141,248,.1);
+      border: 1px solid rgba(91,141,248,.25);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: all .15s;
+      cursor: pointer;
+      margin-top: 6px;
+      margin-right: 4px;
+    }
+    .link-chip:hover { background: rgba(91,141,248,.2); border-color: var(--accent); }
+    .link-chip svg { width: 10px; height: 10px; flex-shrink: 0; }
+
+    /* ── GENERIC MARKDOWN ── */
+    .md h1,.md h2,.md h3,.md h4 { color: var(--text); margin: 0 0 10px; }
+    .md h3 { font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 18px; }
+    .md h4 { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 12px; }
+    .md p { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 10px; }
+    .md ul,.md ol { padding-left: 18px; margin-bottom: 10px; }
+    .md li { font-size: 13px; color: var(--text2); line-height: 1.7; margin-bottom: 3px; }
+    .md strong { color: var(--text); font-weight: 600; }
+    .md em { color: var(--muted); }
+    .md a { color: var(--accent); text-decoration: none; }
+    .md a:hover { text-decoration: underline; }
+    .md table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 12px; }
+    .md th { background: var(--surface2); border: 1px solid var(--border); padding: 8px 12px; text-align: left; font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+    .md td { border: 1px solid var(--border); padding: 9px 12px; vertical-align: top; line-height: 1.5; color: var(--text2); }
+    .md tr:hover td { background: rgba(255,255,255,.02); }
+    .md hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+    .md code { background: var(--surface2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 11px; color: var(--accent2); }
+
+    /* ── TAKEAWAY LIST ── */
+    .takeaway-item {
+      display: flex;
+      gap: 10px;
+      padding: 11px 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .takeaway-num {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent2);
+      min-width: 22px;
+    }
+
+    /* ── STANDARDS BLOCK ── */
+    .standard-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+
+    .standard-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--teal);
+      margin-bottom: 8px;
+    }
+
+    .standard-field { margin-bottom: 6px; font-size: 13px; }
+    .standard-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 2px; }
+    .standard-field-value { color: var(--text2); line-height: 1.5; }
+
+    /* ── RAW VIEW ── */
+    #raw-view {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text2);
+      animation: fadeIn .3s ease;
+    }
+    #raw-view.visible { display: block; }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .hero, .content-area { padding: 16px; }
+      .tabs-bar { padding: 0 16px; }
+      .player-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon">🔐</div>
+    <div>
+      <div class="brand-name">CertIntel</div>
+      <div class="brand-sub">Certificate Intelligence Platform</div>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <div class="status-chip">
+      <div class="dot" id="status-dot"></div>
+      <span id="status-text">Ready</span>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-label">Views</div>
+    <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" id="nav-raw" onclick="switchTab('raw')">
+      <span class="nav-icon">📄</span> Raw Output
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-label">Jump to</div>
+    <div class="nav-item" onclick="jumpTo('card-alerts')">
+      <span class="nav-icon">🚨</span> Alerts
+      <span class="nav-badge" id="alert-badge">!</span>
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-deadlines')">
+      <span class="nav-icon">⏳</span> Deadlines
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-landscape')">
+      <span class="nav-icon">📊</span> Landscape
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-players')">
+      <span class="nav-icon">☁️</span> Players
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-standards')">
+      <span class="nav-icon">🏛️</span> Standards
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-trends')">
+      <span class="nav-icon">📈</span> Trends
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-takeaways')">
+      <span class="nav-icon">🧠</span> Takeaways
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-actions')">
+      <span class="nav-icon">🎯</span> Actions
+    </div>
+    <div class="nav-item" onclick="jumpTo('card-news')">
+      <span class="nav-icon">🗞️</span> News
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-scroll">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-row">
+        <div>
+          <h2>Weekly Certificate Intelligence</h2>
+          <div class="hero-meta" id="week-label">Click Generate to fetch this week's dashboard</div>
+        </div>
+        <div class="hero-btns">
+          <button class="btn btn-ghost" id="copy-btn" onclick="copyMarkdown()" style="display:none">
+            📋 Copy Markdown
+          </button>
+          <button class="btn btn-primary" id="gen-btn" onclick="generateDashboard()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btn-text">⚡ Generate Dashboard</span>
+          </button>
+        </div>
+      </div>
+      <div id="search-status">
+        <div class="search-spinner"></div>
+        <span id="search-msg">Connecting to web search...</span>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs-bar">
+      <div class="tab active" id="tab-dashboard" onclick="switchTab('dashboard')">📊 Structured View</div>
+      <div class="tab" id="tab-raw" onclick="switchTab('raw')">📄 Raw Markdown</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content-area">
+
+      <!-- Dashboard view -->
+      <div id="dashboard-view">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-icon">🔐</div>
+          <h3>No Dashboard Generated Yet</h3>
+          <p>Click "Generate Dashboard" to fetch live certificate intelligence via web search.</p>
+        </div>
+
+        <div id="sections-container" style="display:none">
+
+          <!-- 1. Alerts -->
+          <div class="section-card" id="card-alerts">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">🚨</span> 1. Executive Alerts</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-alerts"></div>
+          </div>
+
+          <!-- 2. Deadlines -->
+          <div class="section-card" id="card-deadlines">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">⏳</span> 2. Upcoming Deadlines & Watchlist</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-deadlines"></div>
+          </div>
+
+          <!-- 3. Landscape -->
+          <div class="section-card" id="card-landscape">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">📊</span> 3. Competitor Landscape</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-landscape"></div>
+          </div>
+
+          <!-- 4. Players -->
+          <div class="section-card" id="card-players">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">☁️</span> 4. Key Moves by Player</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-players"></div>
+          </div>
+
+          <!-- 5. Standards -->
+          <div class="section-card" id="card-standards">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">🏛️</span> 5. Standards & Regulatory Signals</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-standards"></div>
+          </div>
+
+          <!-- 6. Trends -->
+          <div class="section-card" id="card-trends">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">📈</span> 6. Major Trends</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-trends"></div>
+          </div>
+
+          <!-- 7. Takeaways -->
+          <div class="section-card" id="card-takeaways">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">🧠</span> 7. Strategic Takeaways</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-takeaways"></div>
+          </div>
+
+          <!-- 8. Actions -->
+          <div class="section-card" id="card-actions">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">🎯</span> 8. Recommended Actions</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-actions"></div>
+          </div>
+
+          <!-- 9. News -->
+          <div class="section-card" id="card-news">
+            <div class="section-header" onclick="toggleSection(this)">
+              <div class="section-title"><span class="section-icon">🗞️</span> 9. Full News Dump</div>
+              <span class="chevron">▼</span>
+            </div>
+            <div class="section-body" id="body-news"></div>
+          </div>
+
+        </div><!-- /sections-container -->
+      </div><!-- /dashboard-view -->
+
+      <!-- Raw view -->
+      <div id="raw-view"></div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+  let rawMarkdown = "";
+  let currentTab = "dashboard";
+
+  const LINK_ICON = `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V7M8 1h3m0 0v3m0-3L5 7"/></svg>`;
+
+  // ── TAB SWITCH ──
+  function switchTab(tab) {
+    currentTab = tab;
+    ["dashboard","raw"].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle("active", t === tab);
+      document.getElementById(`nav-${t}`).classList.toggle("active", t === tab);
+    });
+    document.getElementById("dashboard-view").style.display = tab === "dashboard" ? "block" : "none";
+    const rawEl = document.getElementById("raw-view");
+    rawEl.classList.toggle("visible", tab === "raw");
+    if (tab === "raw") rawEl.textContent = rawMarkdown || "No content yet.";
+  }
+
+  // ── COLLAPSE ──
+  function toggleSection(header) {
+    header.closest(".section-card").classList.toggle("collapsed");
+  }
+
+  function jumpTo(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (currentTab !== "dashboard") switchTab("dashboard");
+    el.classList.remove("collapsed");
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  // ── UTILITIES ──
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function linkify(text) {
+    // [label](url) → link chip
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_, label, url) =>
+      `<a class="link-chip" href="${url}" target="_blank" rel="noopener">${LINK_ICON} ${esc(label)}</a>`
+    );
+    // bare urls
+    text = text.replace(/(^|[^"=])(https?:\/\/[^\s<>"]+)/g, (_, pre, url) =>
+      `${pre}<a class="link-chip" href="${url}" target="_blank" rel="noopener">${LINK_ICON} Link</a>`
+    );
+    return text;
+  }
+
+  function inlineFormat(text) {
+    text = esc(text);
+    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+    text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+    // [label](url) link chips
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,
+      (_, label, url) => `<a class="link-chip" href="${url}" target="_blank" rel="noopener">${LINK_ICON} ${label}</a>`);
+    // bare urls
+    text = text.replace(/(^|[^"=])(https?:\/\/[^\s<>"&]+)/g,
+      (_, pre, url) => `${pre}<a class="link-chip" href="${url}" target="_blank" rel="noopener">${LINK_ICON} Link</a>`);
+    return text;
+  }
+
+  // ── GENERIC MARKDOWN → HTML ──
+  function genericMd(text) {
+    if (!text || !text.trim()) return '<p style="color:var(--muted);font-size:13px;">No data available for this section.</p>';
+
+    // tables
+    text = text.replace(/(\|.+\|\n?)+/g, match => {
+      const rows = match.trim().split('\n').filter(r => r.trim());
+      if (rows.length < 2) return match;
+      let out = '<table class="md" style="width:100%;border-collapse:collapse;margin-bottom:14px">';
+      rows.forEach((row, i) => {
+        if (/^[\s\|\-:]+$/.test(row)) return;
+        const cells = row.split('|').slice(1,-1);
+        const tag = i === 0 ? 'th' : 'td';
+        const style = tag === 'th'
+          ? 'style="background:var(--surface2);border:1px solid var(--border);padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)"'
+          : 'style="border:1px solid var(--border);padding:9px 12px;font-size:13px;color:var(--text2);vertical-align:top"';
+        out += '<tr>' + cells.map(c => `<${tag} ${style}>${inlineFormat(c.trim())}</${tag}>`).join('') + '</tr>';
+      });
+      return out + '</table>';
+    });
+
+    // headings
+    text = text.replace(/^#### (.+)$/gm, (_, t) => `<h4 class="md" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:12px 0 4px">${inlineFormat(t)}</h4>`);
+    text = text.replace(/^### (.+)$/gm, (_, t) => `<h3 class="md" style="font-size:14px;font-weight:700;color:var(--accent);margin:16px 0 6px">${inlineFormat(t)}</h3>`);
+    text = text.replace(/^## (.+)$/gm, (_, t) => `<h2 class="md" style="font-size:16px;font-weight:700;color:var(--text);margin:20px 0 8px;border-bottom:1px solid var(--border);padding-bottom:6px">${inlineFormat(t)}</h2>`);
+    text = text.replace(/^# (.+)$/gm, (_, t) => `<h1 class="md" style="font-size:18px;font-weight:800;color:var(--text);margin:0 0 12px">${inlineFormat(t)}</h1>`);
+
+    // hr
+    text = text.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0">');
+
+    // unordered lists
+    text = text.replace(/^([ \t]*[-*+] .+\n?)+/gm, match => {
+      const items = match.trim().split('\n').map(l => l.replace(/^[ \t]*[-*+] /, '').trim()).filter(Boolean);
+      return '<ul style="padding-left:18px;margin-bottom:10px">' + items.map(i => `<li style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:3px">${inlineFormat(i)}</li>`).join('') + '</ul>';
+    });
+
+    // paragraphs
+    text = text.replace(/\n\n+/g, '\n\n');
+    const paras = text.split('\n\n');
+    text = paras.map(p => {
+      p = p.trim();
+      if (!p) return '';
+      if (p.startsWith('<')) return p;
+      return `<p style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:10px">${inlineFormat(p.replace(/\n/g,' '))}</p>`;
+    }).join('\n');
+
+    return text || '<p style="color:var(--muted);font-size:13px;">No data available for this section.</p>';
+  }
+
+  // ── SECTION EXTRACTOR ──
+  function extractSection(md, markers) {
+    for (const m of markers) {
+      const idx = md.indexOf(m);
+      if (idx === -1) continue;
+      const after = md.slice(idx + m.length);
+      const next = after.search(/\n##? /);
+      const content = (next !== -1 ? after.slice(0, next) : after).trim();
+      if (content) return content;
+    }
+    return "";
+  }
+
+  function parseSections(md) {
+    return {
+      alerts:    extractSection(md, ["## 🚨 1.", "## 1. EXECUTIVE"]),
+      deadlines: extractSection(md, ["## ⏳ 2.", "## 2. UPCOMING"]),
+      landscape: extractSection(md, ["## 📊 3.", "## 3. COMPETITOR"]),
+      players:   extractSection(md, ["## ☁️ 4.", "## 4. KEY MOVES"]),
+      standards: extractSection(md, ["## 🏛️ 5.", "## 5. STANDARDS"]),
+      trends:    extractSection(md, ["## 📈 6.", "## 6. MAJOR"]),
+      takeaways: extractSection(md, ["## 🧠 7.", "## 7. STRATEGIC"]),
+      actions:   extractSection(md, ["## 🔴 8.", "## 8. RECOMMENDED"]),
+      news:      extractSection(md, ["## 🗞️ 9.", "# 🗞️ 9.", "## 9. FULL", "# 9. FULL"]),
+    };
+  }
+
+  // ── SECTION RENDERERS ──
+
+  function renderAlerts(text) {
+    if (!text || !text.trim()) return fallback();
+    // Split on "### Alert:" headings
+    const blocks = text.split(/\n(?=###\s+Alert:)/i).filter(b => b.trim());
+    if (!blocks.length) return genericMd(text);
+
+    return blocks.map(block => {
+      const titleMatch = block.match(/###\s+Alert:\s*(.+)/i);
+      const title = titleMatch ? titleMatch[1].trim() : "Alert";
+
+      const get = (key) => {
+        const r = block.match(new RegExp(`\\*\\*${key}[^:]*:\\*\\*\\s*([^\n]+)`, 'i'));
+        return r ? r[1].trim() : "";
+      };
+
+      const what = get("What changed");
+      const deadline = get("Deadline");
+      const impact = get("Impact");
+      const action = get("Recommended action") || get("action");
+      const links = extractLinks(block);
+
+      return `<div class="alert-block">
+        <div class="alert-title">⚠️ ${esc(title)}</div>
+        ${what ? `<div class="alert-row"><span class="alert-label">What</span><span class="alert-value">${inlineFormat(what)}</span></div>` : ""}
+        ${deadline ? `<div class="alert-row"><span class="alert-label">Deadline</span><span class="alert-value">${esc(deadline)}</span></div>` : ""}
+        ${impact ? `<div class="alert-row"><span class="alert-label">Impact</span><span class="alert-value">${inlineFormat(impact)}</span></div>` : ""}
+        ${action ? `<div class="alert-row"><span class="alert-label">Action</span><span class="alert-action">${inlineFormat(action)}</span></div>` : ""}
+        ${links.length ? `<div style="margin-top:8px">${links.map(l => `<a class="link-chip" href="${l.url}" target="_blank" rel="noopener">${LINK_ICON} ${esc(l.label)}</a>`).join('')}</div>` : ""}
+      </div>`;
+    }).join('');
+  }
+
+  function renderDeadlines(text) {
+    if (!text || !text.trim()) return fallback();
+    // Try to parse the table
+    const tableMatch = text.match(/(\|.+\|\n?)+/);
+    if (!tableMatch) return genericMd(text);
+
+    const rows = tableMatch[0].trim().split('\n').filter(r => r.trim() && !/^[\s\|\-:]+$/.test(r));
+    if (rows.length < 2) return genericMd(text);
+
+    const headers = rows[0].split('|').slice(1,-1).map(h => h.trim());
+    const dataRows = rows.slice(1);
+
+    let html = `<table class="deadline-table"><thead><tr>`;
+    headers.forEach(h => { html += `<th>${esc(h)}</th>`; });
+    html += `</tr></thead><tbody>`;
+
+    dataRows.forEach(row => {
+      const cells = row.split('|').slice(1,-1).map(c => c.trim());
+      html += '<tr>';
+      cells.forEach((cell, i) => {
+        const isDeadline = headers[i] && headers[i].toLowerCase().includes('deadline');
+        const isAction = headers[i] && (headers[i].toLowerCase().includes('action') || headers[i].toLowerCase().includes('impact'));
+        let content = inlineFormat(cell);
+        html += `<td>${content}</td>`;
+      });
+      html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+  }
+
+  function renderPlayers(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const playerDefs = [
+      { id: "aws", names: ["### AWS"], icon: "🟠", color: "#fb923c" },
+      { id: "azure", names: ["### Azure"], icon: "🔵", color: "#60a5fa" },
+      { id: "gcp", names: ["### GCP", "### Google"], icon: "🟢", color: "#34d399" },
+      { id: "vendors", names: ["### Vendors", "### DigiCert"], icon: "🏢", color: "#a78bfa" },
+    ];
+
+    const cards = [];
+    playerDefs.forEach(p => {
+      let block = "";
+      for (const name of p.names) {
+        const idx = text.indexOf(name);
+        if (idx === -1) continue;
+        const after = text.slice(idx + name.length);
+        const next = after.search(/\n###\s/);
+        block = (next !== -1 ? after.slice(0, next) : after).trim();
+        break;
+      }
+      if (!block) return;
+
+      const get = (key) => {
+        const r = block.match(new RegExp(`\\*\\*${key}[^:]*:\\*\\*\\s*([^\n]+)`, 'i'));
+        return r ? r[1].trim() : "";
+      };
+
+      const update = get("Update");
+      const impact = get("Impact");
+      const links = extractLinks(block);
+
+      cards.push(`<div class="player-card">
+        <div class="player-header">
+          <div class="player-badge" style="background:${p.color}22;border:1px solid ${p.color}44">${p.icon}</div>
+          <div class="player-name">${p.id === "vendors" ? "Vendors" : p.id.toUpperCase()}</div>
+        </div>
+        ${update ? `<div class="player-field"><div class="player-field-label">Update</div><div class="player-field-value">${inlineFormat(update)}</div></div>` : ""}
+        ${impact ? `<div class="player-field"><div class="player-field-label">Impact</div><div class="player-field-value">${inlineFormat(impact)}</div></div>` : ""}
+        ${links.length ? `<div style="margin-top:8px">${links.map(l => `<a class="link-chip" href="${l.url}" target="_blank" rel="noopener">${LINK_ICON} ${esc(l.label)}</a>`).join('')}</div>` : ""}
+      </div>`);
+    });
+
+    if (!cards.length) return genericMd(text);
+    return `<div class="player-grid">${cards.join('')}</div>`;
+  }
+
+  function renderStandards(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const blocks = text.split(/\n(?=###\s)/).filter(b => b.trim());
+    if (!blocks.length) return genericMd(text);
+
+    return blocks.map(block => {
+      const titleMatch = block.match(/###\s+(.+)/);
+      if (!titleMatch) return "";
+      const name = titleMatch[1].trim();
+
+      const get = (key) => {
+        const r = block.match(new RegExp(`\\*\\*${key}[^:]*:\\*\\*\\s*([^\n]+)`, 'i'));
+        return r ? r[1].trim() : "";
+      };
+
+      const what = get("What changed");
+      const why = get("Why it matters");
+      const links = extractLinks(block);
+
+      return `<div class="standard-block">
+        <div class="standard-name">${esc(name)}</div>
+        ${what ? `<div class="standard-field"><div class="standard-field-label">What changed</div><div class="standard-field-value">${inlineFormat(what)}</div></div>` : ""}
+        ${why ? `<div class="standard-field"><div class="standard-field-label">Why it matters</div><div class="standard-field-value">${inlineFormat(why)}</div></div>` : ""}
+        ${links.length ? `<div style="margin-top:8px">${links.map(l => `<a class="link-chip" href="${l.url}" target="_blank" rel="noopener">${LINK_ICON} ${esc(l.label)}</a>`).join('')}</div>` : ""}
+      </div>`;
+    }).filter(Boolean).join('');
+  }
+
+  function renderTrends(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const blocks = text.split(/\n(?=###\s)/).filter(b => b.trim());
+    if (!blocks.length) return genericMd(text);
+
+    return blocks.map(block => {
+      const titleMatch = block.match(/###\s+(.+)/);
+      if (!titleMatch) return "";
+      const name = titleMatch[1].trim();
+
+      const get = (key) => {
+        const r = block.match(new RegExp(`\\*\\*${key}[^:]*:\\*\\*\\s*([^\n]+)`, 'i'));
+        return r ? r[1].trim() : "";
+      };
+
+      const evidence = get("Evidence");
+      const direction = get("Direction");
+      const implication = get("Business implication");
+
+      const dirLower = direction.toLowerCase();
+      let badgeClass = 'trend-early';
+      if (dirLower.includes('accelerat')) badgeClass = 'trend-accelerating';
+      else if (dirLower.includes('mature')) badgeClass = 'trend-mature';
+
+      return `<div class="trend-card">
+        <div class="trend-header">
+          <div class="trend-name">${esc(name)}</div>
+          ${direction ? `<span class="trend-badge ${badgeClass}">${esc(direction)}</span>` : ""}
+        </div>
+        ${evidence ? `<div class="trend-field"><div class="trend-field-label">Evidence</div><div class="trend-field-value">${inlineFormat(evidence)}</div></div>` : ""}
+        ${implication ? `<div class="trend-field"><div class="trend-field-label">Business Implication</div><div class="trend-field-value">${inlineFormat(implication)}</div></div>` : ""}
+      </div>`;
+    }).filter(Boolean).join('');
+  }
+
+  function renderTakeaways(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const items = text.split('\n')
+      .map(l => l.replace(/^[\s]*[-*•] /, '').trim())
+      .filter(l => l && !l.startsWith('#') && !l.startsWith('**'));
+
+    if (!items.length) return genericMd(text);
+
+    return items.map((item, i) =>
+      `<div class="takeaway-item">
+        <span class="takeaway-num">${i+1}.</span>
+        <span>${inlineFormat(item)}</span>
+      </div>`
+    ).join('');
+  }
+
+  function renderActions(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const groups = [
+      { key: "Immediate", label: "Immediate (0–30 days)", cls: "badge-immediate", icon: "🔴" },
+      { key: "Near-term", label: "Near-term (1–3 months)", cls: "badge-nearterm", icon: "🟡" },
+      { key: "Strategic", label: "Strategic (3–12 months)", cls: "badge-strategic", icon: "🔵" },
+    ];
+
+    let html = '';
+    groups.forEach(({ key, label, cls, icon }) => {
+      const re = new RegExp(`\\*\\*${key}[^:]*:\\*\\*\\s*\\n([\\s\\S]*?)(?=\\n\\*\\*[A-Z]|$)`, 'i');
+      const match = text.match(re);
+      if (!match) return;
+
+      const items = match[1].split('\n')
+        .map(l => l.replace(/^[\s]*[-*] /, '').trim())
+        .filter(Boolean);
+
+      if (!items.length) return;
+
+      html += `<div class="action-group">
+        <div class="action-group-title">
+          <span class="action-timeline-badge ${cls}">${icon} ${label}</span>
+        </div>
+        ${items.map(item =>
+          `<div class="action-item">
+            <span class="action-bullet">→</span>
+            <span>${inlineFormat(item)}</span>
+          </div>`
+        ).join('')}
+      </div>`;
+    });
+
+    return html || genericMd(text);
+  }
+
+  function renderNews(text) {
+    if (!text || !text.trim()) return fallback();
+
+    const groups = [
+      { key: "Cloud Providers", icon: "☁️" },
+      { key: "Certificate Vendors", icon: "🏢" },
+      { key: "Standards", icon: "🏛️" },
+    ];
+
+    let html = '';
+    let handled = false;
+
+    groups.forEach(({ key, icon }) => {
+      const re = new RegExp(`###\\s+${key}[^\n]*\\n([\\s\\S]*?)(?=\\n###|$)`, 'i');
+      const match = text.match(re);
+      if (!match) return;
+
+      const lines = match[1].split('\n').filter(l => l.trim().startsWith('-') || l.trim().startsWith('*'));
+      if (!lines.length) return;
+
+      handled = true;
+      html += `<div class="news-group">
+        <div class="news-group-title">${icon} ${key}</div>`;
+
+      lines.forEach(line => {
+        // - **Title** – summary 🔗 link
+        const titleMatch = line.match(/[-*]\s+\*\*(.+?)\*\*/);
+        const title = titleMatch ? titleMatch[1] : "";
+        let rest = titleMatch ? line.slice(line.indexOf(titleMatch[0]) + titleMatch[0].length) : line.replace(/^[-*]\s+/, '');
+        rest = rest.replace(/^[\s–—-]+/, '').trim();
+
+        const links = extractLinks(line);
+        // Remove link markdown from summary
+        const summary = rest.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/🔗\s*(https?:\/\/\S+)/g, '').trim();
+
+        html += `<div class="news-item">
+          <div class="news-dot"></div>
+          <div class="news-body">
+            <div class="news-title">${esc(title || "News item")}</div>
+            ${summary ? `<div class="news-summary">${esc(summary)}</div>` : ""}
+            ${links.length ? `<div style="margin-top:6px">${links.map(l => `<a class="link-chip" href="${l.url}" target="_blank" rel="noopener">${LINK_ICON} ${esc(l.label)}</a>`).join('')}</div>` : ""}
+          </div>
+        </div>`;
+      });
+
+      html += '</div>';
+    });
+
+    return handled ? html : genericMd(text);
+  }
+
+  function fallback() {
+    return '<p style="color:var(--muted);font-size:13px;font-style:italic;">Loading...</p>';
+  }
+
+  // ── LINK EXTRACTOR ──
+  function extractLinks(text) {
+    const links = [];
+    const re = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      links.push({ label: m[1], url: m[2] });
+    }
+    // bare urls not already in []()
+    const bare = /(?<!\]\()https?:\/\/[^\s<>")\]]+/g;
+    while ((m = bare.exec(text)) !== null) {
+      if (!links.find(l => l.url === m[0])) {
+        links.push({ label: "Link", url: m[0] });
+      }
+    }
+    return links;
+  }
+
+  // ── RENDER ALL SECTIONS ──
+  function renderSections(md) {
+    const s = parseSections(md);
+
+    document.getElementById("body-alerts").innerHTML = s.alerts
+      ? renderAlerts(s.alerts)
+      : fallback();
+
+    document.getElementById("body-deadlines").innerHTML = s.deadlines
+      ? renderDeadlines(s.deadlines)
+      : fallback();
+
+    document.getElementById("body-landscape").innerHTML = s.landscape
+      ? genericMd(s.landscape)
+      : fallback();
+
+    document.getElementById("body-players").innerHTML = s.players
+      ? renderPlayers(s.players)
+      : fallback();
+
+    document.getElementById("body-standards").innerHTML = s.standards
+      ? renderStandards(s.standards)
+      : fallback();
+
+    document.getElementById("body-trends").innerHTML = s.trends
+      ? renderTrends(s.trends)
+      : fallback();
+
+    document.getElementById("body-takeaways").innerHTML = s.takeaways
+      ? renderTakeaways(s.takeaways)
+      : fallback();
+
+    document.getElementById("body-actions").innerHTML = s.actions
+      ? renderActions(s.actions)
+      : fallback();
+
+    document.getElementById("body-news").innerHTML = s.news
+      ? renderNews(s.news)
+      : fallback();
+
+    // alert badge
+    const badge = document.getElementById("alert-badge");
+    if (s.alerts && !s.alerts.toLowerCase().includes("no immediate")) {
+      badge.style.display = "flex";
+    }
+  }
+
+  // ── GENERATE ──
+  function generateDashboard() {
+    const btn = document.getElementById("gen-btn");
+    const spinner = document.getElementById("spinner");
+    const btnText = document.getElementById("btn-text");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+    const searchStatus = document.getElementById("search-status");
+    const empty = document.getElementById("empty-state");
+    const sections = document.getElementById("sections-container");
+    const copyBtn = document.getElementById("copy-btn");
+
+    btn.disabled = true;
+    spinner.style.display = "block";
+    btnText.textContent = "Generating...";
+    statusDot.className = "dot loading";
+    statusText.textContent = "Generating...";
+    searchStatus.classList.add("visible");
+    document.getElementById("search-msg").textContent = "Connecting to web search...";
+
+    rawMarkdown = "";
+    empty.style.display = "none";
+    sections.style.display = "block";
+    copyBtn.style.display = "none";
+
+    // week label
+    const now = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - 6);
+    document.getElementById("week-label").textContent =
+      `Week of ${start.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${now.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+
+    ["alerts","deadlines","landscape","players","standards","trends","takeaways","actions","news"].forEach(k => {
+      document.getElementById(`body-${k}`).innerHTML = fallback();
+    });
+
+    const source = new EventSource("/generate");
+
+    source.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      if (data.type === "searching") {
+        document.getElementById("search-msg").textContent = data.content;
+
+      } else if (data.type === "text") {
+        rawMarkdown += data.content;
+        renderSections(rawMarkdown);
+        if (currentTab === "raw") document.getElementById("raw-view").textContent = rawMarkdown;
+
+      } else if (data.type === "done") {
+        source.close();
+        btn.disabled = false;
+        spinner.style.display = "none";
+        btnText.textContent = "⚡ Regenerate";
+        statusDot.className = "dot live";
+        statusText.textContent = "Live";
+        searchStatus.classList.remove("visible");
+        copyBtn.style.display = "inline-flex";
+        renderSections(rawMarkdown);
+        if (currentTab === "raw") document.getElementById("raw-view").textContent = rawMarkdown;
+
+      } else if (data.type === "error") {
+        source.close();
+        btn.disabled = false;
+        spinner.style.display = "none";
+        btnText.textContent = "⚡ Retry";
+        statusDot.className = "dot error";
+        statusText.textContent = "Error";
+        searchStatus.classList.remove("visible");
+        sections.style.display = "none";
+        empty.style.display = "block";
+        empty.querySelector("h3").textContent = "Generation Failed";
+        empty.querySelector("p").textContent = data.content;
+        empty.querySelector(".empty-icon").textContent = "⚠️";
+      }
+    };
+
+    source.onerror = () => {
+      source.close();
+      btn.disabled = false;
+      spinner.style.display = "none";
+      btnText.textContent = "⚡ Retry";
+      statusDot.className = "dot error";
+      statusText.textContent = "Disconnected";
+      searchStatus.classList.remove("visible");
+    };
+  }
+
+  // ── COPY ──
+  function copyMarkdown() {
+    navigator.clipboard.writeText(rawMarkdown).then(() => {
+      const btn = document.getElementById("copy-btn");
+      btn.textContent = "✅ Copied!";
+      setTimeout(() => { btn.innerHTML = "📋 Copy Markdown"; }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
