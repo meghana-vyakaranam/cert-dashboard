@@ -1017,7 +1017,13 @@
     return text;
   }
 
+  function stripCitations(text) {
+    // remove <cite index="...">...</cite> and bare <cite ...> tags from Claude web search
+    return text.replace(/<cite[^>]*>.*?<\/cite>/gi, '').replace(/<\/?cite[^>]*>/gi, '');
+  }
+
   function inlineFormat(text) {
+    text = stripCitations(text);
     text = esc(text);
     text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
@@ -1128,6 +1134,9 @@
       const deadline = get("Deadline");
       const impact = get("Impact");
       const action = get("Recommended action") || get("action");
+      // also try emoji-prefixed variant: **🔴 Recommended action:**
+      const actionRaw = block.match(/\*\*[^*]*[Rr]ecommended\s+action[^:]*:\*\*\s*([^\n]+)/i);
+      const actionText = action || (actionRaw ? actionRaw[1].trim() : "");
       const links = extractLinks(block);
 
       const actionBtns = links.map((l, i) =>
@@ -1141,10 +1150,10 @@
         ${what ? `<div class="alert-row"><span class="alert-label">What</span><span class="alert-value">${inlineFormat(what)}</span></div>` : ""}
         ${deadline ? `<div class="alert-row"><span class="alert-label">Deadline</span><span class="alert-value">${esc(deadline)}</span></div>` : ""}
         ${impact ? `<div class="alert-row"><span class="alert-label">Impact</span><span class="alert-value">${inlineFormat(impact)}</span></div>` : ""}
-        ${action || links.length ? `
+        ${actionText || links.length ? `
         <div class="alert-action-box">
           <div class="alert-action-box-title">🎯 Recommended Action</div>
-          ${action ? `<div class="alert-action-text">${inlineFormat(action)}</div>` : ""}
+          ${actionText ? `<div class="alert-action-text">${inlineFormat(actionText)}</div>` : ""}
           ${actionBtns}
         </div>` : ""}
       </div>`;
